@@ -1,60 +1,62 @@
 # chatgpt-web
-Pure Javascript ChatGPT demo based on OpenAI API 
+Pure Javascript ChatGPT demo based on OpenAI API
 
-纯JS实现的ChatGPT项目，基于OpenAI API
+A pure JavaScript implementation of the ChatGPT project, based on the OpenAI API.
 
-部署一个HTML文件即可使用。
+Deploy an HTML file to use it.
 
-支持复制/更新/刷新会话，语音输入，朗读等功能，以及众多[自定义选项](#自定义选项)。
+Supports features such as copy/update/refresh session, voice input, text-to-speech, and many [custom options](#custom-options).
 
-支持搜索会话，深色模式，自定义头像，[PWA应用](#pwa应用)，API额度显示等。
+Supports session search, dark mode, custom avatars, [PWA application](#pwa-application), API quota display, and more.
 
-参考项目: 
-[markdown-it](https://github.com/markdown-it/markdown-it), 
-[highlight.js](https://github.com/highlightjs/highlight.js), 
-[github-markdown-css](https://github.com/sindresorhus/github-markdown-css), 
-[chatgpt-html](https://github.com/slippersheepig/chatgpt-html), 
-[markdown-it-copy](https://github.com/ReAlign/markdown-it-copy), 
-[markdown-it-texmath](https://github.com/goessner/markdown-it-texmath), 
+Reference projects:
+[markdown-it](https://github.com/markdown-it/markdown-it),
+[highlight.js](https://github.com/highlightjs/highlight.js),
+[github-markdown-css](https://github.com/sindresorhus/github-markdown-css),
+[chatgpt-html](https://github.com/slippersheepig/chatgpt-html),
+[markdown-it-copy](https://github.com/ReAlign/markdown-it-copy),
+[markdown-it-texmath](https://github.com/goessner/markdown-it-texmath),
 [awesome-chatgpt-prompts-zh](https://github.com/PlexPt/awesome-chatgpt-prompts-zh)
 
-![示例](https://raw.githubusercontent.com/xqdoo00o/chatgpt-web/main/example.png)
+![Example](https://raw.githubusercontent.com/xqdoo00o/chatgpt-web/main/example.png)
 
 ## Demo
 
-[在线预览](https://xqdoo00o.github.io/chatgpt-web/) （使用需配置OpenAI接口和API密钥）
+[Online Preview](https://xqdoo00o.github.io/chatgpt-web/) (Requires configuration of OpenAI API endpoint and API key)
 
-## 使用方法
-### **注意：部署反代接口请注意OpenAI的[支持地区](https://platform.openai.com/docs/supported-countries)，部署在不支持地区的服务器可能导致封号！最好配置https，公网以http方式明文传输API key非常不安全！**
+## Usage
+### **Note: When deploying a reverse proxy interface, please pay attention to the [supported regions](https://platform.openai.com/docs/supported-countries) by OpenAI. Deploying on servers in unsupported regions may result in account suspension! It is recommended to configure HTTPS, as transmitting the API key in plain text over the public network using HTTP is highly insecure!**
 ___
-- **仅部署HTML**
+- **Deploy HTML Only**
 
-    使用任意http server部署index.html。打开网页设置，填写API密钥，填写OpenAI接口，当本地
+    Deploy the `index.html` file using any HTTP server. Open the webpage settings, enter the API key, and specify the OpenAI API endpoint.
 
-    - 可正常访问`api.openai.com`，填写`https://api.openai.com/`
+    - If you can access `api.openai.com` normally, enter `https://api.openai.com/`.
+    
+    - If you cannot access `api.openai.com` normally, enter the reverse proxy address (you can use [Cloudflare Worker](https://github.com/xqdoo00o/openai-proxy) or similar). Note: The reverse proxy interface response must include the cross-origin header `Access-Control-Allow-Origin`.
+    
+- **Deploy HTML and OpenAI Reverse Proxy Interface Together**
 
-    - 不可正常访问`api.openai.com`，填写其反代地址（可使用[Cloudflare Worker](https://github.com/xqdoo00o/openai-proxy)等反代），注意：反代接口响应需添加跨域Header `Access-Control-Allow-Origin`
-- **同时部署HTML和OpenAI反代接口**
-
-    **注意：服务器需正常访问`api.openai.com`，网页不用设置OpenAI接口了**
-    - 使用nginx，示例配置如下
+    **Note: The server must be able to access `api.openai.com`, and there is no need to set the OpenAI API endpoint in the webpage.**
+    
+    - Using Nginx, the example configuration is as follows:
 
         ```
         map $http_authorization $gptauth {
             default  $http_authorization;
-            #配置默认API密钥，在Bearer 后填写。如只允许在网页端设置API密钥使用，请删除下一行。
+            # Configure the default API key after "Bearer ". If you only allow setting the API key on the webpage, please delete the next line.
             ""       "Bearer sk-your-token";
         }
         server {
             listen       80;
             server_name  example.com;
-            #开启openai接口的gzip压缩，大量重复文本的压缩率高，节省服务端流量
+            # Enable gzip compression for the openai interface. Compression works well for large amounts of repetitive text and saves server-side bandwidth.
             gzip  on;
             gzip_min_length 1k;
             gzip_types text/event-stream;
 
-            #如需部署在网站子路径，如"example.com/chatgpt"，配置如下
-            #location ^~ /chatgpt/v1 {
+            # If you need to deploy in a website subdirectory, such as "example.com/chatgpt", configure as follows:
+            # location ^~ /chatgpt/v1 {
             location ^~ /v1 {
                 proxy_pass https://api.openai.com/v1;
                 proxy_set_header Host api.openai.com;
@@ -62,26 +64,26 @@ ___
                 proxy_ssl_server_name on;
                 proxy_set_header Authorization $gptauth;
                 proxy_pass_header Authorization;
-                #流式传输，不关闭buffering缓存会卡死，必须配置！！！
+                # Streaming transfer, buffering must be turned off, otherwise it will hang. Must be configured!!!
                 proxy_buffering off;
             }
-            #与上面反代接口的路径保持一致
-            #location /chatgpt {
+            # Keep consistent with the path of the reverse proxy interface above
+            # location /chatgpt {
             location / {
                 alias /usr/share/nginx/html/;
                 index index.html;
             }
         }
         ```
-        如服务器无法正常访问`api.openai.com`，可配合socat反代和http代理使用，proxy_pass配置改成
+        If the server cannot access `api.openai.com` normally, you can use socat for reverse proxy and HTTP proxy. Change the `proxy_pass` configuration to:
         ```
         proxy_pass https://127.0.0.1:8443/v1;
         ```
-        并打开socat
+        And start socat:
         ```
-        socat TCP4-LISTEN:8443,reuseaddr,fork PROXY:http代理地址:api.openai.com:443,proxyport=http代理端口
+        socat TCP4-LISTEN:8443,reuseaddr,fork PROXY:http-proxy-address:api.openai.com:443,proxyport=http-proxy-port
         ```
-    - 使用Caddy，可以自动生产HTTPS证书，示例配置如下
+    - Using Caddy, which can automatically generate HTTPS certificates. The example configuration is as follows:
 
         ```
         yourdomain.example.com {
@@ -97,48 +99,49 @@ ___
             }
         }
         ```
-        **Caddy 2.6.5及之后版本支持https_proxy和http_proxy环境变量，如服务器无法正常访问`api.openai.com`，可先设置代理环境变量**
+        **Caddy 2.6.5 and later versions support the `https_proxy` and `http_proxy` environment variables. If the server cannot access `api.openai.com` normally, you can set the proxy environment variables first.**
 
-## PWA应用
-部署文件[icon.png](https://raw.githubusercontent.com/xqdoo00o/chatgpt-web/main/icon.png)，[manifest.json](https://raw.githubusercontent.com/xqdoo00o/chatgpt-web/main/manifest.json)，[sw.js](https://raw.githubusercontent.com/xqdoo00o/chatgpt-web/main/sw.js)到index.html同目录下，即可支持PWA应用。
+## PWA Application
+Deploy the files [icon.png](https://raw.githubusercontent.com/xqdoo00o/chatgpt-web/main/icon.png), [manifest.json](https://raw.githubusercontent.com/xqdoo00o/chatgpt-web/main/manifest.json), and [sw.js](https://raw.githubusercontent.com/xqdoo00o/chatgpt-web/main/sw.js) in the same directory as `index.html` to enable PWA application support.
 
-**注意：如果重命名index.html使用，则sw.js文件中`./index.html`也需修改。**
+**Note: If you rename `index.html`, you also need to modify `./index.html` in the `sw.js` file.**
 
-**部署PWA应用后，更新html文件需同步更新sw.js，不然无法更新成功。**
+**After deploying the PWA application, if you update the HTML file, you need to update `sw.js` at the same time, otherwise the update may not take effect.**
 
-## 自定义选项
+## Custom Options
 
-- 左边栏支持，搜索会话，新建/重命名/删除(会话/文件夹)，浅色/深色/自动主题模式，导出/导入/重置会话和设置数据，显示API额度，显示本地存储。
+- Left sidebar support: session search, create/rename/delete (session/folder), light/dark/auto theme mode, export/import/reset session and settings data, display API quota, display local storage.
 
-- 可选GPT模型，默认gpt-3.5，当前使用gpt-4模型需通过OpenAI的表单申请，或使用[ChatGPT-to-API](https://github.com/xqdoo00o/ChatGPT-to-API)模拟网页ChatGPT为API使用（使用gpt-4需Plus账户）。
+- Optional GPT model: default is gpt-3.5. To use the gpt-4 model, you need to apply through OpenAI's form or use [ChatGPT-to-API](https://github.com/xqdoo00o/ChatGPT-to-API) to simulate the web ChatGPT for API usage (gpt-4 requires a Plus account).
 
-- 可选OpenAI接口地址，使用nginx或caddy部署反代后可以不设置。
+- Optional OpenAI API endpoint: If you deploy a reverse proxy using Nginx or Caddy, you can leave this field empty.
 
-- 可选API密钥，默认不设置，**如需网页设置自定义API密钥使用，反代接口最好配置https，公网以http方式明文传输API key极易被中间人截获。**
+- Optional API key: By default, it is not set. **If you want to use a custom API key in the webpage settings, it is recommended to configure HTTPS for the reverse proxy interface. Transmitting the API key in plain text over the public network using HTTP is highly insecure.**
 
-- 可选用户头像，可修改为任意图片地址。
+- Optional user avatar: You can modify it to any image URL.
 
-- 可选系统角色，默认不开启，有四个预设角色，并动态加载[awesome-chatgpt-prompts-zh](https://github.com/PlexPt/awesome-chatgpt-prompts-zh)中的角色。
-- 可选角色性格，默认灵活创新，对应接口文档的top_p参数。
+- Optional system roles: By default, it is not enabled. There are four preset roles, and they are dynamically loaded from [awesome-chatgpt-prompts-zh](https://github.com/PlexPt/awesome-chatgpt-prompts-zh).
 
-- 可选回答质量，默认平衡，对应接口文档的temperature参数。
+- Optional role personality: By default, it is set to "flexible and creative," corresponding to the `top_p` parameter in the API documentation.
 
-- 修改打字机速度，默认较快，值越大速度越快。
+- Optional answer quality: By default, it is set to "balanced," corresponding to the `temperature` parameter in the API documentation.
 
-- 允许连续对话，默认开启，对话中包含上下文信息，会导致api费用增加。
+- Modify typewriter speed: By default, it is set to "fast." The larger the value, the faster the speed.
 
-- 允许长回复，默认关闭，**开启后可能导致api费用增加，并丢失大部分上下文，对于一些要发送`继续`才完整的回复，不用发`继续`了。**
+- Allow continuous conversation: By default, it is enabled. Including context information in the conversation will increase API costs.
 
-- 选择语音，默认Bing语音，支持Azure语音和系统语音，可分开设置提问语音和回答语音。
+- Allow long replies: By default, it is disabled. **Enabling it may increase API costs and lose most of the context. For some replies that require a "continue" to be complete, there is no need to send "continue" when this option is enabled.**
 
-- 音量，默认最大。
+- Select voice: By default, it is set to Bing Speech. Supports Azure Speech and system speech, which can be set separately for question and answer voices.
 
-- 语速，默认正常。
+- Volume: By default, it is set to maximum.
 
-- 音调，默认正常。
+- Speaking rate: By default, it is set to normal.
 
-- 允许连续朗读，默认开启，连续郎读到所有对话结束。
+- Pitch: By default, it is set to normal.
 
-- 允许自动朗读，默认关闭，自动朗读新的回答。**（iOS需打开设置-自动播放视频预览，Mac上Safari需打开此网站的设置-允许全部自动播放）**
+- Allow continuous text-to-speech: By default, it is enabled. Continuously reads all the conversations until the end.
 
-- 支持语音输入，默认识别为普通话，可长按语音按钮修改识别选项。**语音识别必需条件：使用chrome内核系浏览器 + https网页或本地网页。** 如点击语音按钮没反应，可能是未授予麦克风权限或者没安装麦克风设备。
+- Allow automatic text-to-speech: By default, it is disabled. Automatically reads new replies. **(On iOS, you need to enable "Settings - Auto-Play Video Previews," and on Safari for Mac, you need to enable "Settings for This Website - Allow All Auto-Play").**
+
+- Support voice input: By default, it is set to recognize Mandarin Chinese. Long press the voice button to modify the recognition options. **Voice recognition requirements: Use a browser based on the Chrome kernel + HTTPS webpage or local webpage.** If clicking the voice button does not respond, it may be due to microphone permission not being granted or no microphone device being installed.
